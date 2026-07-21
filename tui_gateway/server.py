@@ -2423,23 +2423,27 @@ def _note_skin_broadcast(name: str) -> None:
 
 
 def _broadcast_skin_if_changed() -> None:
-    """Emit ``skin.changed`` when the active skin changed out-of-band — e.g. the
-    agent authored a skin and ran ``hermes config set display.skin`` mid-turn.
+    """Emit ``skin.changed`` when the active skin name changed — e.g. the agent ran
+    ``hermes config set display.skin`` in a tool this turn.
 
-    This routes an agent-driven switch through the SAME live path as ``/skin`` so
-    every connected surface (TUI + desktop) repaints, without the agent needing to
-    type a slash command. Idempotent: an unchanged skin never re-broadcasts.
+    Routes an agent-driven switch through the SAME live path as ``/skin`` so every
+    surface (TUI + desktop) repaints, no slash command needed. Called after each
+    tool so an author→activate flow — even switch-then-revert in one turn —
+    repaints as it happens. Name-gated off the mtime-cached config, so a tool that
+    didn't touch the skin costs one dict lookup.
     """
     global _last_broadcast_skin
     try:
-        skin = resolve_skin()
+        name = str((_load_cfg().get("display") or {}).get("skin") or "default")
     except Exception:
         return
-    name = str(skin.get("name") or "")
-    if not name or name == _last_broadcast_skin:
+    if name == _last_broadcast_skin:
         return
     _last_broadcast_skin = name
-    _emit("skin.changed", "", skin)
+    try:
+        _emit("skin.changed", "", resolve_skin())
+    except Exception:
+        pass
 
 
 def _resolve_model() -> str:
@@ -4145,6 +4149,9 @@ def _on_tool_complete(sid: str, tool_call_id: str, name: str, args: dict, result
         pass
     if _tool_progress_enabled(sid) or payload.get("inline_diff"):
         _emit("tool.complete", sid, payload)
+    # A tool may have activated a skin (`hermes config set display.skin`) — apply
+    # it live now so an agent switch repaints every surface mid-turn.
+    _broadcast_skin_if_changed()
 
 
 def _on_tool_progress(
@@ -10424,9 +10431,6 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                 session["last_active"] = time.time()
                 _clear_inflight_turn(session)
             _emit("session.info", sid, _session_info(agent, session))
-            # An agent that authored + activated a skin this turn (via
-            # `hermes config set display.skin`) switches live on every surface.
-            _broadcast_skin_if_changed()
 
         # A user prompt that arrived mid-turn (interrupt + queue) wins over
         # every auto follow-up below — drain it first and skip them this cycle;
