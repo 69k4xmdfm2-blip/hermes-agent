@@ -1,15 +1,10 @@
+import type { HermesSkin } from '@hermes/shared'
 import type { UsageModelData } from '@hermes/shared/billing'
 
 import type { SessionInfo, SlashCategory, SubagentStatus, Usage } from './types.js'
 
-export interface GatewaySkin {
-  banner_hero?: string
-  banner_logo?: string
-  branding?: Record<string, string>
-  colors?: Record<string, string>
-  help_header?: string
-  tool_prefix?: string
-}
+/** The cross-surface skin contract (canonical shape in `@hermes/shared`). */
+export type GatewaySkin = HermesSkin
 
 export interface GatewayCompletionItem {
   display: string
