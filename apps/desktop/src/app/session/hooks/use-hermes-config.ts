@@ -1,4 +1,4 @@
-import type { HermesSkin } from '@hermes/shared'
+import type { HermesSkin } from '@hermes/shared/skin'
 import { type MutableRefObject, useCallback, useRef, useState } from 'react'
 
 import { getHermesConfig, getHermesConfigDefaults } from '@/hermes'

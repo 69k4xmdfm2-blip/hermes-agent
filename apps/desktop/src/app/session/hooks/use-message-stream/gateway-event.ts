@@ -1,4 +1,4 @@
-import type { HermesSkin } from '@hermes/shared'
+import type { HermesSkin } from '@hermes/shared/skin'
 import type { QueryClient } from '@tanstack/react-query'
 import { type MutableRefObject, useCallback, useEffect, useRef } from 'react'
 

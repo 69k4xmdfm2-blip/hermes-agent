@@ -1,5 +1,5 @@
-import type { HermesSkin } from '@hermes/shared'
 import type { UsageModelData } from '@hermes/shared/billing'
+import type { HermesSkin } from '@hermes/shared/skin'
 
 import type { SessionInfo, SlashCategory, SubagentStatus, Usage } from './types.js'
 

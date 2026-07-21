@@ -1,3 +1,5 @@
+import type { SkinBranding, SkinColors } from '@hermes/shared/skin'
+
 export interface ThemeColors {
   primary: string
   accent: string
@@ -511,8 +513,8 @@ export const DEFAULT_THEME: Theme = normalizeThemeForAnsiLightTerminal(
 // ── Skin → Theme ─────────────────────────────────────────────────────
 
 export function fromSkin(
-  colors: Record<string, string>,
-  branding: Record<string, string>,
+  colors: SkinColors,
+  branding: SkinBranding,
   bannerLogo = '',
   bannerHero = '',
   toolPrefix = '',
