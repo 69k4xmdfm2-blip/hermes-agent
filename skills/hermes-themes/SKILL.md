@@ -23,6 +23,8 @@ editors or ship built-in presets.
 - The user asks for a custom look ("make me a synthwave theme", "dark forest
   vibes", "match my brand colors") for Hermes itself.
 - The user wants the CLI/TUI/desktop to share one coordinated palette.
+- The user wants to iterate live ("that coral is too loud, make it teal") — edit
+  the active skin's YAML and every surface repaints as your tool finishes.
 
 ## Prerequisites
 

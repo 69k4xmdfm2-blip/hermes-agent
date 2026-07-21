@@ -2017,25 +2017,19 @@ def test_slow_completion_does_not_block_fast_handler(completion_method, server):
     released.set()
 
 
-def test_broadcast_skin_if_changed_only_on_real_change(server, monkeypatch):
-    """A skin the agent activates mid-turn (`hermes config set display.skin`) goes
-    live once per change: broadcast skin.changed only when the configured name
-    actually moves — including switch-then-revert — never on an unchanged tool."""
+def test_broadcast_skin_if_changed_on_any_signature_move(server, monkeypatch):
+    """A skin the agent changes mid-turn goes live once per real move: a name
+    switch (incl. switch-then-revert) OR an in-place color edit to the active skin
+    (same name, new file mtime). An unchanged signature never re-broadcasts."""
     emitted = []
-    current = {"name": ""}
-    cfg_names = iter(["neon", "neon", "forest", "default"])
+    # switch, no-op, switch, then a color edit (same name, bumped mtime).
+    sigs = iter([("neon", 1.0), ("neon", 1.0), ("forest", 1.0), ("forest", 2.0)])
     monkeypatch.setattr(server, "_emit", lambda ev, sid, payload=None: emitted.append((ev, payload)))
-    monkeypatch.setattr(server, "_last_broadcast_skin", None, raising=False)
-
-    def _cfg():
-        current["name"] = next(cfg_names)
-        return {"display": {"skin": current["name"]}}
-
-    monkeypatch.setattr(server, "_load_cfg", _cfg)
-    monkeypatch.setattr(server, "resolve_skin", lambda: {"name": current["name"], "colors": {}})
+    monkeypatch.setattr(server, "_last_skin_sig", None, raising=False)
+    monkeypatch.setattr(server, "_skin_sig", lambda: next(sigs))
+    monkeypatch.setattr(server, "resolve_skin", lambda: {"name": "x", "colors": {}})
 
     for _ in range(4):
         server._broadcast_skin_if_changed()
 
     assert [ev for ev, _ in emitted] == ["skin.changed"] * 3
-    assert [p["name"] for _, p in emitted] == ["neon", "forest", "default"]

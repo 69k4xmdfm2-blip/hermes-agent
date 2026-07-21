@@ -2410,36 +2410,52 @@ def resolve_skin() -> dict:
         return {}
 
 
-# Last skin name broadcast to clients. Lets a turn-end reconcile fire
-# ``skin.changed`` only on a real change (see _broadcast_skin_if_changed).
-_last_broadcast_skin: str | None = None
+# Signature of the last skin broadcast: (name, active user-file mtime). Lets the
+# per-tool reconcile fire ``skin.changed`` on any real move — a name switch OR a
+# live color edit to the active skin — and nothing else.
+_last_skin_sig: tuple[str, float | None] | None = None
 
 
-def _note_skin_broadcast(name: str) -> None:
-    """Record the last skin broadcast (the /skin RPC uses this so the turn-end
-    reconcile doesn't re-emit a skin it just applied)."""
-    global _last_broadcast_skin
-    _last_broadcast_skin = name
+def _skin_sig() -> tuple[str, float | None]:
+    """(active skin name, its user-file mtime). Built-ins have no file, so only
+    their name moves; a user skin's mtime lets an in-place color edit repaint too."""
+    name = str((_load_cfg().get("display") or {}).get("skin") or "default")
+    override = get_hermes_home_override()
+    home = override if isinstance(override, str) and override else _hermes_home
+    try:
+        mtime: float | None = (Path(home) / "skins" / f"{name}.yaml").stat().st_mtime
+    except OSError:
+        mtime = None
+    return name, mtime
+
+
+def _note_skin_broadcast() -> None:
+    """Sync the reconcile baseline after the /skin RPC emits, so the per-tool
+    check doesn't re-broadcast the skin /skin just applied."""
+    global _last_skin_sig
+    try:
+        _last_skin_sig = _skin_sig()
+    except Exception:
+        pass
 
 
 def _broadcast_skin_if_changed() -> None:
-    """Emit ``skin.changed`` when the active skin name changed — e.g. the agent ran
-    ``hermes config set display.skin`` in a tool this turn.
+    """Emit ``skin.changed`` when the active skin moved — the agent switched it
+    (``hermes config set display.skin``) OR edited the active skin's colors in
+    place ("I don't like that coral" → tweak the YAML).
 
-    Routes an agent-driven switch through the SAME live path as ``/skin`` so every
-    surface (TUI + desktop) repaints, no slash command needed. Called after each
-    tool so an author→activate flow — even switch-then-revert in one turn —
-    repaints as it happens. Name-gated off the mtime-cached config, so a tool that
-    didn't touch the skin costs one dict lookup.
+    Routes through the SAME live path as ``/skin`` so every surface (TUI + desktop)
+    repaints, no slash command. Called after each tool; the signature check is a
+    dict lookup + one stat, so a tool that didn't touch the skin is ~free.
     """
-    global _last_broadcast_skin
+    global _last_skin_sig
     try:
-        name = str((_load_cfg().get("display") or {}).get("skin") or "default")
+        sig = _skin_sig()
     except Exception:
         return
-    if name == _last_broadcast_skin:
+    if sig == _last_skin_sig:
         return
-    _last_broadcast_skin = name
+    _last_skin_sig = sig
     try:
         _emit("skin.changed", "", resolve_skin())
     except Exception:
@@ -11919,9 +11935,9 @@ def _(rid, params: dict) -> dict:
                 nv = value
                 if key == "skin":
                     _emit("skin.changed", "", resolve_skin())
-                    # Keep the reconcile baseline in sync so the turn-end check
-                    # doesn't re-broadcast a skin the /skin RPC just applied.
-                    _note_skin_broadcast(str(nv))
+                    # Keep the reconcile baseline in sync so the per-tool check
+                    # doesn't re-broadcast the skin the /skin RPC just applied.
+                    _note_skin_broadcast()
             resp = {"key": key, "value": nv}
             if key == "personality":
                 resp["history_reset"] = history_reset
