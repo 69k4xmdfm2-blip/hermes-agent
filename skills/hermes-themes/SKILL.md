@@ -73,15 +73,11 @@ full schema in `hermes_cli/skin_engine.py`.
    ```
    hermes config set display.skin <name>
    ```
-   This is the source of truth all surfaces read; it writes valid YAML so it
-   can't corrupt the file (a bad hand-edit can break the running gateway,
-   including the `/` menu).
-   - **Desktop**: repaints automatically after the current turn, and the skin
-     appears in Appearance / `Cmd-K` / `/skin`.
-   - **CLI / TUI**: a running session does not hot-reload a config-file change —
-     you can't switch it live from a tool call. **Tell the user to run
-     `/skin <name>`** for an instant switch (it also persists); otherwise it
-     loads on next start.
+   It writes valid YAML (a bad hand-edit corrupts the file and can break the live
+   gateway, including the `/` menu). When your turn ends, the gateway broadcasts
+   the change and **every connected surface repaints live** — CLI, TUI, and
+   desktop — and the skin appears in Appearance / `Cmd-K` / `/skin`. No slash
+   command needed; the user can still `/skin <name>` to switch manually.
 4. **Confirm** and tell the user how to switch back: `/skin default`.
 
 ## Pitfalls
@@ -98,14 +94,13 @@ full schema in `hermes_cli/skin_engine.py`.
 - **Never hand-edit `config.yaml` to activate.** Use `hermes config set
   display.skin <name>` — a stray indent in a manual edit corrupts the file and
   can break the live gateway (including `/`). One command, always valid.
-- **A tool call can't live-switch a running CLI/TUI.** Only `/skin <name>`
-  (typed by the user) or a restart applies it in-session — say so instead of
-  claiming it switched.
+- **Live switch fires at turn end**, when the gateway reconciles the active skin
+  and broadcasts it. So `hermes config set display.skin <name>` is enough — the
+  repaint lands as your turn finishes; you don't (and can't) type `/skin`.
 
 ## Verification
 
 - `read_file` the written `<hermes-home>/skins/<name>.yaml` and confirm valid
   YAML with the intended `name` and `colors`.
 - Run `hermes config get display.skin` and confirm it reports `<name>`.
-- Ask the user to confirm the new look (desktop repaints on the next turn; CLI/TUI
-  after `/skin <name>` or restart).
+- The repaint lands as this turn ends — ask the user to confirm the new look.

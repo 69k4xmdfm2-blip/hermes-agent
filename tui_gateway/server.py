@@ -2410,6 +2410,38 @@ def resolve_skin() -> dict:
         return {}
 
 
+# Last skin name broadcast to clients. Lets a turn-end reconcile fire
+# ``skin.changed`` only on a real change (see _broadcast_skin_if_changed).
+_last_broadcast_skin: str | None = None
+
+
+def _note_skin_broadcast(name: str) -> None:
+    """Record the last skin broadcast (the /skin RPC uses this so the turn-end
+    reconcile doesn't re-emit a skin it just applied)."""
+    global _last_broadcast_skin
+    _last_broadcast_skin = name
+
+
+def _broadcast_skin_if_changed() -> None:
+    """Emit ``skin.changed`` when the active skin changed out-of-band — e.g. the
+    agent authored a skin and ran ``hermes config set display.skin`` mid-turn.
+
+    This routes an agent-driven switch through the SAME live path as ``/skin`` so
+    every connected surface (TUI + desktop) repaints, without the agent needing to
+    type a slash command. Idempotent: an unchanged skin never re-broadcasts.
+    """
+    global _last_broadcast_skin
+    try:
+        skin = resolve_skin()
+    except Exception:
+        return
+    name = str(skin.get("name") or "")
+    if not name or name == _last_broadcast_skin:
+        return
+    _last_broadcast_skin = name
+    _emit("skin.changed", "", skin)
+
+
 def _resolve_model() -> str:
     env = (
         os.environ.get("HERMES_MODEL", "")
@@ -10392,6 +10424,9 @@ def _run_prompt_submit(rid, sid: str, session: dict, text: Any) -> None:
                 session["last_active"] = time.time()
                 _clear_inflight_turn(session)
             _emit("session.info", sid, _session_info(agent, session))
+            # An agent that authored + activated a skin this turn (via
+            # `hermes config set display.skin`) switches live on every surface.
+            _broadcast_skin_if_changed()
 
         # A user prompt that arrived mid-turn (interrupt + queue) wins over
         # every auto follow-up below — drain it first and skip them this cycle;
@@ -11880,6 +11915,9 @@ def _(rid, params: dict) -> dict:
                 nv = value
                 if key == "skin":
                     _emit("skin.changed", "", resolve_skin())
+                    # Keep the reconcile baseline in sync so the turn-end check
+                    # doesn't re-broadcast a skin the /skin RPC just applied.
+                    _note_skin_broadcast(str(nv))
             resp = {"key": key, "value": nv}
             if key == "personality":
                 resp["history_reset"] = history_reset
@@ -12519,15 +12557,8 @@ def _(rid, params: dict) -> dict:
     if key == "prompt":
         return _ok(rid, {"prompt": _load_cfg().get("custom_prompt", "")})
     if key == "skin":
-        # `value` is the active skin name (back-compat, used by the TUI). `skin`
-        # carries the full resolved palette so cross-surface consumers (the
-        # desktop) can rebuild the theme without their own YAML loader.
         return _ok(
-            rid,
-            {
-                "value": (_load_cfg().get("display") or {}).get("skin", "default"),
-                "skin": resolve_skin(),
-            },
+            rid, {"value": (_load_cfg().get("display") or {}).get("skin", "default")}
         )
     if key == "indicator":
         # Normalize so a hand-edited config.yaml with stray casing or

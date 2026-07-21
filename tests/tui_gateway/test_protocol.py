@@ -2015,3 +2015,20 @@ def test_slow_completion_does_not_block_fast_handler(completion_method, server):
     assert fast_elapsed < 2.0, f"fast handler blocked for {fast_elapsed:.2f}s behind {completion_method}"
 
     released.set()
+
+
+def test_broadcast_skin_if_changed_only_on_real_change(server, monkeypatch):
+    """An agent-authored skin (config changed mid-turn) goes live once per change:
+    the turn-end reconcile broadcasts skin.changed only when the name actually
+    moves — never on an unchanged turn, never for a nameless payload."""
+    emitted = []
+    monkeypatch.setattr(server, "_emit", lambda ev, sid, payload=None: emitted.append((ev, payload)))
+    monkeypatch.setattr(server, "_last_broadcast_skin", None, raising=False)
+    skins = iter([{"name": "neon"}, {"name": "neon"}, {"name": "forest"}, {"name": ""}])
+    monkeypatch.setattr(server, "resolve_skin", lambda: next(skins))
+
+    for _ in range(4):
+        server._broadcast_skin_if_changed()
+
+    assert [ev for ev, _ in emitted] == ["skin.changed", "skin.changed"]
+    assert [p["name"] for _, p in emitted] == ["neon", "forest"]
