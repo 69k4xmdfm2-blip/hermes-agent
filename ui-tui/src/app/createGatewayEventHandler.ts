@@ -13,6 +13,7 @@ import { isTodoDone } from '../lib/liveProgress.js'
 import { openExternalUrl } from '../lib/openExternalUrl.js'
 import { rpcErrorMessage } from '../lib/rpc.js'
 import { topLevelSubagents } from '../lib/subagentTree.js'
+import { setTerminalBackground } from '../lib/terminalModes.js'
 import { formatAbandonedClarify, formatToolCall, stripAnsi } from '../lib/text.js'
 import { fromSkin } from '../theme.js'
 import type { Msg, SubagentProgress, SubagentStatus } from '../types.js'
@@ -29,7 +30,7 @@ const NO_PROVIDER_RE = /\bNo (?:LLM|inference) provider configured\b/i
 
 const statusFromBusy = () => (getUiState().busy ? 'running…' : 'ready')
 
-const applySkin = (s: GatewaySkin) =>
+const applySkin = (s: GatewaySkin) => {
   patchUiState({
     theme: fromSkin(
       s.colors ?? {},
@@ -40,6 +41,10 @@ const applySkin = (s: GatewaySkin) =>
       s.help_header ?? ''
     )
   })
+  // Paint the whole terminal from the skin's `background` (empty ⇒ restore the
+  // terminal default), so Hermes owns its background instead of inheriting it.
+  setTerminalBackground(s.colors?.background ?? '')
+}
 
 const dropBgTask = (taskId: string) =>
   patchUiState(state => {
