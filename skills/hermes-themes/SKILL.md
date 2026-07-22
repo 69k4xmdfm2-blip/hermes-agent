@@ -70,17 +70,18 @@ full schema in `hermes_cli/skin_engine.py`.
    `ui_ok`/`ui_warn`/`ui_error` recognizably green/amber/red.
 2. **Write the file** to `<hermes-home>/skins/<name>.yaml`. Every top-level
    `colors` key from the template should be present.
-3. **Activate — never hand-edit `config.yaml`.** Persist the choice with the safe
-   writer via `terminal`:
+3. **Apply it yourself — never hand-edit `config.yaml`.** Run the safe writer via
+   `terminal`:
    ```
    hermes config set display.skin <name>
    ```
-   It writes valid YAML (a bad hand-edit corrupts the file and can break the live
-   gateway, including the `/` menu). When your turn ends, the gateway broadcasts
-   the change and **every connected surface repaints live** — CLI, TUI, and
-   desktop — and the skin appears in Appearance / `Cmd-K` / `/skin`. No slash
-   command needed; the user can still `/skin <name>` to switch manually.
-4. **Confirm** and tell the user how to switch back: `/skin default`.
+   The gateway's skin watcher notices the change and **repaints every surface live
+   within ~a second** — CLI, TUI, and desktop — and the skin appears in
+   Appearance / `Cmd-K` / `/skin`. You apply it; do NOT tell the user to run
+   `/skin` (they still can, but it's your job). The writer emits valid YAML — a
+   hand-edit can corrupt the file and break the live gateway (including `/`).
+4. **Confirm the new look landed** and tell the user how to revert: run
+   `hermes config set display.skin default` (or they can `/skin default`).
 
 ## Pitfalls
 
@@ -96,9 +97,9 @@ full schema in `hermes_cli/skin_engine.py`.
 - **Never hand-edit `config.yaml` to activate.** Use `hermes config set
   display.skin <name>` — a stray indent in a manual edit corrupts the file and
   can break the live gateway (including `/`). One command, always valid.
-- **Live switch fires at turn end**, when the gateway reconciles the active skin
-  and broadcasts it. So `hermes config set display.skin <name>` is enough — the
-  repaint lands as your turn finishes; you don't (and can't) type `/skin`.
+- **You apply it, not the user.** `hermes config set display.skin <name>` is
+  enough — the gateway's watcher repaints every surface within ~a second. Don't
+  defer to "type /skin yourself"; that's the old behavior.
 
 ## Verification
 

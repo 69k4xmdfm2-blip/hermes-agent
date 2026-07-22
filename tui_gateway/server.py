@@ -2445,8 +2445,8 @@ def _broadcast_skin_if_changed() -> None:
     place ("I don't like that coral" → tweak the YAML).
 
     Routes through the SAME live path as ``/skin`` so every surface (TUI + desktop)
-    repaints, no slash command. Called after each tool; the signature check is a
-    dict lookup + one stat, so a tool that didn't touch the skin is ~free.
+    repaints, no slash command. The signature check is a dict lookup + one stat,
+    so polling it is ~free.
     """
     global _last_skin_sig
     try:
@@ -2460,6 +2460,28 @@ def _broadcast_skin_if_changed() -> None:
         _emit("skin.changed", "", resolve_skin())
     except Exception:
         pass
+
+
+_skin_watcher_started = False
+
+
+def _ensure_skin_watcher() -> None:
+    """Poll the config for skin changes and broadcast ``skin.changed`` — so a skin
+    Hermes activates (``hermes config set display.skin``) or recolors goes live on
+    every surface within ~half a second, on its own, with no tool-hook or slash
+    command in the loop. Idempotent; started at gateway.ready."""
+    global _skin_watcher_started
+    if _skin_watcher_started:
+        return
+    _skin_watcher_started = True
+    _note_skin_broadcast()  # seed the baseline so only a real change repaints
+
+    def _loop() -> None:
+        while True:
+            time.sleep(0.5)
+            _broadcast_skin_if_changed()
+
+    threading.Thread(target=_loop, name="hermes-skin-watcher", daemon=True).start()
 
 
 def _resolve_model() -> str:
@@ -4165,9 +4187,6 @@ def _on_tool_complete(sid: str, tool_call_id: str, name: str, args: dict, result
         pass
     if _tool_progress_enabled(sid) or payload.get("inline_diff"):
         _emit("tool.complete", sid, payload)
-    # A tool may have activated a skin (`hermes config set display.skin`) — apply
-    # it live now so an agent switch repaints every surface mid-turn.
-    _broadcast_skin_if_changed()
 
 
 def _on_tool_progress(
