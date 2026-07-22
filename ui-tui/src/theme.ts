@@ -21,6 +21,12 @@ export interface ThemeColors {
   /** Reasoning/thinking body text. Defaults to `muted`. */
   thinking: string
 
+  /** Code-block syntax highlight. Default to accent/text/border/muted. */
+  syntaxString: string
+  syntaxNumber: string
+  syntaxKeyword: string
+  syntaxComment: string
+
   prompt: string
   sessionLabel: string
   sessionBorder: string
@@ -284,6 +290,11 @@ export const DARK_THEME: Theme = {
     tool: '#FFBF00',
     thinking: '#CC9B1F',
 
+    syntaxString: '#FFBF00',
+    syntaxNumber: '#FFF8DC',
+    syntaxKeyword: '#CD7F32',
+    syntaxComment: '#CC9B1F',
+
     prompt: '#FFF8DC',
     // sessionLabel/sessionBorder intentionally track the `dim` value — they
     // are "same role, same colour" by design.  fromSkin's banner_dim fallback
@@ -334,6 +345,11 @@ export const LIGHT_THEME: Theme = {
 
     tool: '#A0651C',
     thinking: '#7A5A0F',
+
+    syntaxString: '#A0651C',
+    syntaxNumber: '#3D2F13',
+    syntaxKeyword: '#7A4F1F',
+    syntaxComment: '#7A5A0F',
 
     prompt: '#2B2014',
     sessionLabel: '#7A5A0F',
@@ -568,6 +584,11 @@ export function fromSkin(
 
         tool: c('ui_tool') ?? accent,
         thinking: c('ui_thinking') ?? muted,
+
+        syntaxString: c('syntax_string') ?? accent,
+        syntaxNumber: c('syntax_number') ?? c('ui_text') ?? c('banner_text') ?? d.color.syntaxNumber,
+        syntaxKeyword: c('syntax_keyword') ?? c('ui_border') ?? c('banner_border') ?? d.color.syntaxKeyword,
+        syntaxComment: c('syntax_comment') ?? muted,
 
         prompt: c('prompt') ?? c('banner_text') ?? d.color.prompt,
         sessionLabel: c('session_label') ?? muted,
