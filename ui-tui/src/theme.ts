@@ -16,6 +16,11 @@ export interface ThemeColors {
   error: string
   warn: string
 
+  /** Tool-call markers (● bullet, tool spinner). Defaults to `accent`. */
+  tool: string
+  /** Reasoning/thinking body text. Defaults to `muted`. */
+  thinking: string
+
   prompt: string
   sessionLabel: string
   sessionBorder: string
@@ -98,10 +103,11 @@ const ANSI_NORMALIZED_FOREGROUNDS: readonly (keyof ThemeColors)[] = [
   'statusWarn',
   'statusBad',
   'statusCritical',
-  'shellDollar'
+  'shellDollar',
+  'tool'
 ]
 
-const ANSI_MUTED_FOREGROUNDS: readonly (keyof ThemeColors)[] = ['muted', 'sessionLabel', 'sessionBorder']
+const ANSI_MUTED_FOREGROUNDS: readonly (keyof ThemeColors)[] = ['muted', 'sessionLabel', 'sessionBorder', 'thinking']
 
 function xtermEightBitRgb(colorNumber: number): [number, number, number] {
   if (colorNumber >= 232) {
@@ -275,6 +281,9 @@ export const DARK_THEME: Theme = {
     error: '#ef5350',
     warn: '#ffa726',
 
+    tool: '#FFBF00',
+    thinking: '#CC9B1F',
+
     prompt: '#FFF8DC',
     // sessionLabel/sessionBorder intentionally track the `dim` value — they
     // are "same role, same colour" by design.  fromSkin's banner_dim fallback
@@ -322,6 +331,9 @@ export const LIGHT_THEME: Theme = {
     ok: '#2E7D32',
     error: '#C62828',
     warn: '#E65100',
+
+    tool: '#A0651C',
+    thinking: '#7A5A0F',
 
     prompt: '#2B2014',
     sessionLabel: '#7A5A0F',
@@ -554,6 +566,9 @@ export function fromSkin(
         error: c('ui_error') ?? d.color.error,
         warn: c('ui_warn') ?? d.color.warn,
 
+        tool: c('ui_tool') ?? accent,
+        thinking: c('ui_thinking') ?? muted,
+
         prompt: c('prompt') ?? c('banner_text') ?? d.color.prompt,
         sessionLabel: c('session_label') ?? muted,
         sessionBorder: c('session_border') ?? muted,
@@ -569,10 +584,10 @@ export function fromSkin(
           c('completion_menu_current_bg') ??
           (hasSkinColors ? completionCurrentBg : d.color.selectionBg),
 
-        diffAdded: d.color.diffAdded,
-        diffRemoved: d.color.diffRemoved,
-        diffAddedWord: d.color.diffAddedWord,
-        diffRemovedWord: d.color.diffRemovedWord,
+        diffAdded: c('diff_added') ?? d.color.diffAdded,
+        diffRemoved: c('diff_removed') ?? d.color.diffRemoved,
+        diffAddedWord: c('diff_added_word') ?? d.color.diffAddedWord,
+        diffRemovedWord: c('diff_removed_word') ?? d.color.diffRemovedWord,
         shellDollar: c('shell_dollar') ?? d.color.shellDollar
       },
 
